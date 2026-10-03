@@ -1,0 +1,26 @@
+name: Security Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run application
+        run: python3 app.py
+
+      - name: Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Semgrep Scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/python
