@@ -8,19 +8,29 @@ on:
 jobs:
   security:
     runs-on: ubuntu-latest
-
     steps:
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run application
-        run: python3 app.py
-
-      - name: Secret Scan
-        uses: gitleaks/gitleaks-action@v2
-
-      - name: Semgrep Scan
-        uses: semgrep/semgrep-action@v1
+      - uses: actions/checkout@v4
         with:
-          config: p/python
+          fetch-depth: 0              # full history for gitleaks
+
+      - name: Gitleaks (find secrets)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        if: always()                  # don't skip Python setup if gitleaks failed
+        with:
+          python-version: "3.12"
+
+      - name: Install tools
+        run: pip install semgrep pytest
+        if: always()
+
+      - name: Semgrep (find insecure code)
+        run: semgrep scan --config p/python --error
+        if: always()                  # run even if gitleaks failed
+
+      - name: Tests
+        run: pytest -v
+        if: always()                  # run even if an earlier scan failed
